@@ -222,16 +222,18 @@ class Maze:
 			# Add the starting position in the maze to the path
 			path.append(start)
 			# Move to next state given the policy and the current state
-			next_s = self.__move(s,policy[s])
+			minotaur_moves = self.__minotaur_moves(s)
+			next_s = self.__move(s,policy[s], np.random.choice(minotaur_moves))
 			# Add the position in the maze corresponding to the next state
 			# to the path
 			path.append(self.states[next_s])
 			# Loop while state is not the goal state
-			while s != next_s:
+			while self.states[s][0:2] != start[2:4]:
 				# Update state
 				s = next_s
 				# Move to next state given the policy and the current state
-				next_s = self.__move(s,policy[s])
+				minotaur_moves = self.__minotaur_moves(s)
+				next_s = self.__move(s,policy[s], np.random.choice(minotaur_moves))
 				# Add the position in the maze corresponding to the next state
 				# to the path
 				path.append(self.states[next_s])
@@ -286,7 +288,6 @@ def dynamic_programming(env, horizon):
 
 	# The dynamic programming bakwards recursion
 	for t in range(T-1,-1,-1):
-		print("T =", t)
 		# Update the value function acccording to the bellman equation
 		for s in range(n_states):
 			for a in range(n_actions):
@@ -440,7 +441,7 @@ def animate_solution(maze, path, start):
 		grid.get_celld()[(path[i][2:])].set_facecolor(LIGHT_RED)
 		grid.get_celld()[(path[i][2:])].get_text().set_text('Minotaur')
 		if i > 0:
-			print(path[i][0:2], start[0:2], path[i][0:2] == start[0:2])
+			print(path[i][0:2], start[0:2], path[i][0:2] == start[2:])
 			if path[i][0:2] == start[2:]:
 				grid.get_celld()[(path[i][0:2])].set_facecolor(LIGHT_GREEN)
 				grid.get_celld()[(path[i][0:2])].get_text().set_text('Player is out')
