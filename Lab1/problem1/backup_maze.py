@@ -33,26 +33,21 @@ class Maze:
 	}
 
 	# Reward values
-	STEP_REWARD = 0
-	GOAL_REWARD = 1
+	STEP_REWARD = -1
+	GOAL_REWARD = 0
 	IMPOSSIBLE_REWARD = -100
-	EATEN_REWARD = 0
-	TERMINAL_REWARD = 0
+	EATEN_REWARD = -100
 
-	def __init__(self, maze, goal_state = (6, 5)):
+	def __init__(self, maze, weights=None, random_rewards=False):
 		""" Constructor of the environment Maze.
 		"""
 		self.maze                     = maze
-		self.goal_state = goal_state
 		self.actions                  = self.__actions()
 		self.states, self.map         = self.__states()
-		self.terminal_state           = (-1, -1, -1, -1)
-		self.terminal_state_number    = self.map[self.terminal_state]
 		self.n_actions                = len(self.actions)
 		self.n_states                 = len(self.states)
 		self.transition_probabilities = self.__transitions()
-		self.rewards                  = self.__rewards()
-		print(self.terminal_state, self.terminal_state_number)
+		self.rewards                  = self.__rewards(weights=weights, random_rewards=random_rewards)
 
 	def __actions(self):
 		actions = dict()
@@ -76,9 +71,6 @@ class Maze:
 							states[s] = (i1, j1, i2, j2)
 							map[(i1, j1, i2, j2)] = s
 							s += 1
-		# Create terminal state
-		states[s] = (-1, -1, -1, -1)
-		map[(-1, -1, -1, -1)] = s
 		return states, map
 
 	def __move(self, state, action_player, action_minotaur):
@@ -87,9 +79,8 @@ class Maze:
 
 			:return tuple next_cell: Position (x,y) on the maze that agent transitions to.
 		"""
-		# if in terminal state, goal state or eaten state, return terminal state.
-		if state == self.terminal_state_number or self.maze[self.states[state][0], self.states[state][1]] == 3 or self.states[state][0:2] == self.states[state][2:]:
-			return self.terminal_state_number
+		#if self.states[state][0] == self.states[state][2] and self.states[state][1] == self.states[state][4]:
+		#	return state
 		# Compute the future position given current (state, action)
 		row_player = self.states[state][0] + self.actions[action_player][0]
 		col_player = self.states[state][1] + self.actions[action_player][1]
@@ -99,14 +90,20 @@ class Maze:
 								(self.maze[row_player,col_player] == 1)
 
 		# Minotaur can't stay in the same place
-		#if action_minotaur == 0:
-		#	raise Exception("Minotaur can't use the action STAY")
+		if action_minotaur == 0:
+			raise Exception("Minotaur can't use the action STAY")
 		row_minotaur = self.states[state][2] + self.actions[action_minotaur][0]
 		col_minotaur = self.states[state][3] + self.actions[action_minotaur][1]
+		# Is the future position outside the maze
+		if(row_minotaur == -1) or (row_minotaur == self.maze.shape[0]) or (col_minotaur == -1) or (col_minotaur == self.maze.shape[1]):
+			raise Exception("Minotaur is outside of maze")
 		# Minotaur can walk through one set of walls
-		if(self.maze[row_minotaur, col_minotaur] == 1):
-			row_minotaur += self.actions[action_minotaur][0]
-			col_minotaur += self.actions[action_minotaur][1]
+		elif(self.maze[row_minotaur, col_minotaur] == 1):
+			if(self.maze[row_minotaur + self.actions[action_minotaur][0], col_minotaur +  self.actions[action_minotaur][1]] == 0):
+				row_minotaur += self.actions[action_minotaur][0]
+				col_minotaur += self.actions[action_minotaur][1]
+			else:
+				raise Exception("Minotaur can only walk through one block of wall")
 		if hitting_maze_walls:
 			return self.map[(self.states[state][0], self.states[state][1], row_minotaur, col_minotaur)]
 		else:
@@ -118,8 +115,6 @@ class Maze:
 		for i, act in self.actions.items():
 			# Minotaur can't stay in the same place
 			if i == 0:
-				if(self.states[state][0:2] == self.states[state][2:] or state == self.terminal_state_number):
-					possible_actions.append(0)
 				continue
 			row = self.states[state][2] + act[0]
 			col = self.states[state][3] + act[1]
@@ -147,39 +142,55 @@ class Maze:
 
 		# Compute the transition probabilities.
 		for s in range(self.n_states):
-			if s == self.terminal_state_number or self.states[s][0:2] == self.states[s][2:] or self.maze[self.states[s][0], self.states[s][1]] == 3:
-				transition_probabilities[self.terminal_state_number, s, :] = 1
-			else:
+			minotaur_moves = self.__minotaur_moves(s)
+			for a_p in range(self.n_actions):
+				for a_m in minotaur_moves: 
+					next_s = self.__move(s, a_p, a_m)
+					transition_probabilities[next_s, s, a_p] = 1/len(minotaur_moves)
+		return transition_probabilities
+
+	def __rewards(self, weights=None, random_rewards=None):
+		rewards = np.zeros((self.n_states, self.n_actions))
+		# If the rewards are not described by a weight matrix
+		if weights is None:
+			for s in range(self.n_states):
 				minotaur_moves = self.__minotaur_moves(s)
 				for a_p in range(self.n_actions):
 					for a_m in minotaur_moves:
 						next_s = self.__move(s, a_p, a_m)
-						transition_probabilities[next_s, s, a_p] = 1/len(minotaur_moves)
-		return transition_probabilities
+						# Rewrd for being eaten
 
-	def __rewards(self):
-		rewards = np.zeros((self.n_states, self.n_actions))
-		for s in range(self.n_states):
-			minotaur_moves = self.__minotaur_moves(s)
-			for a_p in range(self.n_actions):
-				for a_m in minotaur_moves:
-					next_s = self.__move(s, a_p, a_m)
-					# Rewrd for being eaten
-					if self.states[next_s][0:2] == self.states[next_s][2:]:
-						rewards[s, a_p] += self.EATEN_REWARD/len(minotaur_moves)
-					# Rewrd for hitting a wall
-					if self.states[s][0] == self.states[next_s][0] and self.states[s][1] == self.states[next_s][1] and a_p != self.STAY:
-						rewards[s, a_p] += self.IMPOSSIBLE_REWARD/len(minotaur_moves)
-					# Reward after getting to the exit
-					elif self.states[s][0:2] == self.states[next_s][0:2] and self.maze[self.states[next_s][0], self.states[next_s][1]] == 3:
-						rewards[s, a_p] += self.TERMINAL_REWARD/len(minotaur_moves)
-					# Reward for reaching the exit
-					elif self.maze[self.states[next_s][0], self.states[next_s][1]] == 3:
-						rewards[s, a_p] += self.GOAL_REWARD/len(minotaur_moves)
-					# Reward for taking a step to an empty cell that is not the exit
-					else:
-						rewards[s, a_p] += self.STEP_REWARD/len(minotaur_moves)
-				#rewards[s, a_p] /= len(minotaur_moves)
+						if self.states[s][0] == self.states[s][2] and self.states[s][1] == self.states[s][3]:
+							rewards[s, a_p] += self.EATEN_REWARD
+						# Rewrd for hitting a wall
+						if self.states[s][0] == self.states[next_s][0] and self.states[s][1] == self.states[next_s][1] and a_p != self.STAY:
+							rewards[s, a_p] += self.IMPOSSIBLE_REWARD
+						# Reward for reaching the exit
+						elif self.states[s][0] == self.states[next_s][0] and self.states[s][1] == self.states[next_s][1] and self.maze[self.states[next_s][0], self.states[next_s][1]] == 3:
+							rewards[s, a_p] += self.GOAL_REWARD
+						# Reward for taking a step to an empty cell that is not the exit
+						else:
+							rewards[s, a_p] += self.STEP_REWARD
+
+						# If there exists trapped cells with probability 0.5
+						if random_rewards and self.maze[self.states[next_s]]<0:
+							row, col = self.states[next_s]
+							# With probability 0.5 the reward is
+							r1 = (1 + abs(self.maze[row, col])) * rewards[s,a]
+							# With probability 0.5 the reward is
+							r2 = rewards[s,a_p]
+							# The average reward
+							rewards[s,a_p] = 0.5*r1 + 0.5*r2
+
+					rewards[s, a_p] /= len(minotaur_moves)
+		# If the weights are descrobed by a weight matrix
+		else:
+			for s in range(self.n_states):
+					for a in range(self.n_actions):
+						next_s = self.__move(s,a)
+						i,j = self.states[next_s]
+						# Simply put the reward as the weights o the next state.
+						rewards[s,a] = weights[i][j]
 		return rewards
 
 	def simulate(self, start, policy, method):
@@ -196,7 +207,7 @@ class Maze:
 			s = self.map[start]
 			# Add the starting position in the maze to the path
 			path.append(start)
-			while t < horizon:
+			while t < horizon-1:
 				# Move to next state given the policy and the current state
 				minotaur_moves = self.__minotaur_moves(s)
 				next_s = self.__move(s,policy[s,t], np.random.choice(minotaur_moves))
@@ -432,12 +443,12 @@ def animate_solution(maze, path, start):
 		grid.get_celld()[(path[i][2:])].get_text().set_text('Minotaur')
 		if i > 0:
 			print(path[i][0:2], start[0:2], path[i][0:2] == start[2:])
-			'''if path[i][0:2] == start[2:]:
+			if path[i][0:2] == start[2:]:
 				grid.get_celld()[(path[i][0:2])].set_facecolor(LIGHT_GREEN)
 				grid.get_celld()[(path[i][0:2])].get_text().set_text('Player is out')
 				return
 			elif path[i][0:2] == path[i][2:]:
-				return'''
+				return
 			print(path[i])
 		display.display(fig)
 		display.clear_output(wait=True)

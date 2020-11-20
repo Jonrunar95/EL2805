@@ -21,20 +21,23 @@ mz.draw_maze(maze)
 
 # Create an environment maze
 env = mz.Maze(maze)
-# env.show()
-'''
+#env.show()
+
 # Finite horizon
-horizon = 10
+horizon = 20
+start  = (0, 0, 6, 5)
+
 # Solve the MDP problem with dynamic programming 
 V, policy= mz.dynamic_programming(env,horizon)
-
+print(V[env.map[start]])
 # Simulate the shortest path starting from position A
 method = 'DynProg'
-start  = (0, 0, 6, 5)
-path = env.simulate(start, policy, method)
 
-mz.animate_solution(maze, path)
+path = env.simulate(start, policy, method)
+print(path)
 '''
+mz.animate_solution(maze, path)
+
 # Discount Factor 
 gamma   = 0.95
 # Accuracy treshold 
@@ -44,3 +47,4 @@ V, policy = mz.value_iteration(env, gamma, epsilon)
 method = 'ValIter'
 start  = (0,0,6,5)
 path = env.simulate(start, policy, method)
+'''
