@@ -173,23 +173,17 @@ class Maze:
 		return self.__police_moves(state, True)
 
 # Q learning algorithm
-def Q_learning(env, iters=None, start=None):
+def Q_learning(env, iters=10000000, start=None):
 	n_states  = env.n_states
 	n_actions = env.n_actions
+	reward = env.rewards
+	Q = np.zeros((n_states, n_actions)) # Q states
+	n = np.ones((n_states, n_actions)) # No. of updates in Q, for step siz
 
 	if start == None:
 		start = env.start_state
-	if iters == None:
-		iters = 10000000
 
-	# Required variables
-	Q = np.zeros((n_states, n_actions)) # Q states
-	n = np.ones((n_states, n_actions)) # No. of updates in Q, for step size
-
-	reward = env.rewards
-	
 	gamma = 0.8 # Discount factor
-	#epsilon = 0.2 # Exploration probability
 
 	state = env.map[start]
 	maxQ = []
@@ -206,17 +200,49 @@ def Q_learning(env, iters=None, start=None):
 		maxQ.append(np.max(Q))
 	return Q, maxQ
 
-# def Reward(env, state):
-# 	player_pos = env.states[state][0:2]
-# 	police_pos = env.states[state][2:]
+
+# SARSA algorithm
+def Sarsa(env, iters=10000000, start=None, epsilon=0.1):
+	n_states  = env.n_states
+	n_actions = env.n_actions
+
+	if start == None:
+		start = env.start_stat
+
+	# Required variables
+	Q = np.zeros((n_states, n_actions)) # Q states
+	n = np.ones((n_states, n_actions)) # No. of updates in Q, for step size
+
+	reward = env.rewards
 	
-# 	# Reward for being caught
-# 	elif player_pos[0] == police_pos[0] and player_pos[1] == police_pos[1]:
-# 		return env.CAUGHT_REWARD
-# 	# Reward for robbing a bank
-# 	elif env.maze[player_pos] == 1:
-# 		return env.ROB_BANK
-# 	return 0
+	gamma = 0.8 # Discount factor
+	alpha = 0.8
+
+	state = env.map[start]
+	action = np.random.choice(list(env.actions.keys()))
+	maxQ = []
+
+	for i in range(iters):
+		alpha = 1/(n[state, action]**(2/3)) # Step size
+		rand = np.random.rand() # Lets roll exploration check
+		policeAction = np.random.choice(env.getPoliceAction(state))
+		new_state = env.move_state(state, action, policeAction)
+
+		# If we roll exploration (epsilon is exploration probability)
+		if rand <= epsilon:
+			new_action = np.random.choice(list(env.actions.keys()))
+			Q_next = Q[new_state, new_action]
+		else:
+			new_action = np.argmax(Q[new_state, :])
+			Q_next = Q[new_state, new_action]
+		
+		Q[state, action] = Q[state, action] + alpha * (reward[state, action] + gamma * Q_next - Q[state, action])
+		n[state, action] += 1
+		state = new_state
+		action = new_action
+		maxQ.append(np.max(Q))
+	return Q, maxQ
+
 
 
 def draw_maze(maze):
