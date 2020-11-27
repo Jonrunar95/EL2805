@@ -39,11 +39,12 @@ class Maze:
 	EATEN_REWARD = 0
 	TERMINAL_REWARD = 0
 
-	def __init__(self, maze, goal_state = (6, 5)):
+	def __init__(self, maze, Minataur_Stay, goal_state = (6, 5)):
 		""" Constructor of the environment Maze.
 		"""
 		self.maze                     = maze
-		self.goal_state = goal_state
+		self.goal_state 			  = goal_state
+		self.Minataur_Stay 			  = Minataur_Stay
 		self.actions                  = self.__actions()
 		self.states, self.map         = self.__states()
 		self.terminal_state           = (-1, -1, -1, -1)
@@ -52,7 +53,6 @@ class Maze:
 		self.n_states                 = len(self.states)
 		self.transition_probabilities = self.__transitions()
 		self.rewards                  = self.__rewards()
-		print(self.terminal_state, self.terminal_state_number)
 
 	def __actions(self):
 		actions = dict()
@@ -116,11 +116,15 @@ class Maze:
 		# Compute the future position given current (state, action)
 		possible_actions = []
 		for i, act in self.actions.items():
-			# Minotaur can't stay in the same place
-			if i == 0:
+			if self.Minataur_Stay == False:
+				# Minotaur can't stay in the same place
+				if i == 0:
+					if(self.states[state][0:2] == self.states[state][2:] or state == self.terminal_state_number):
+						possible_actions.append(0)
+					continue
+			else:
 				if(self.states[state][0:2] == self.states[state][2:] or state == self.terminal_state_number):
 					possible_actions.append(0)
-				continue
 			row = self.states[state][2] + act[0]
 			col = self.states[state][3] + act[1]
 			# Is the future position an impossible one ?
@@ -270,7 +274,6 @@ def dynamic_programming(env, horizon):
 	policy = np.zeros((n_states, T+1))
 	Q      = np.zeros((n_states, n_actions))
 
-	print(r.shape)
 	# Initialization
 	Q            = np.copy(r)
 	V[:, T]      = np.max(Q,1)
@@ -421,27 +424,19 @@ def animate_solution(maze, path, start):
 
 	# Update the color at each frame
 	for i in range(len(path)):
-		grid.get_celld()[(path[i-1][0:2])].set_facecolor(col_map[maze[path[i-1][0:2]]])
-		grid.get_celld()[(path[i-1][0:2])].get_text().set_text('')
-		grid.get_celld()[(path[i-1][2:])].set_facecolor(col_map[maze[path[i-1][2:]]])
-		grid.get_celld()[(path[i-1][2:])].get_text().set_text('')
+		if path[i] == (-1, -1, -1, -1):
+			return
+		if i > 0:
+			grid.get_celld()[(path[i-1][0:2])].set_facecolor(col_map[maze[path[i-1][0:2]]])
+			grid.get_celld()[(path[i-1][0:2])].get_text().set_text('')
+			grid.get_celld()[(path[i-1][2:])].set_facecolor(col_map[maze[path[i-1][2:]]])
+			grid.get_celld()[(path[i-1][2:])].get_text().set_text('')
 
 		grid.get_celld()[(path[i][0:2])].set_facecolor(LIGHT_ORANGE)
 		grid.get_celld()[(path[i][0:2])].get_text().set_text('Player')
 		grid.get_celld()[(path[i][2:])].set_facecolor(LIGHT_RED)
 		grid.get_celld()[(path[i][2:])].get_text().set_text('Minotaur')
-		if i > 0:
-			print(path[i][0:2], start[0:2], path[i][0:2] == start[2:])
-			'''if path[i][0:2] == start[2:]:
-				grid.get_celld()[(path[i][0:2])].set_facecolor(LIGHT_GREEN)
-				grid.get_celld()[(path[i][0:2])].get_text().set_text('Player is out')
-				return
-			elif path[i][0:2] == path[i][2:]:
-				return'''
-			print(path[i])
+
 		display.display(fig)
 		display.clear_output(wait=True)
 		time.sleep(1)
-
-def plotMaxProb(env, tmin=0, tmax=20):
-	return

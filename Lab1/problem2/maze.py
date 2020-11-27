@@ -86,9 +86,6 @@ class Maze:
 		row_police = self.states[state][2] + self.actions[action_police][0]
 		col_police = self.states[state][3] + self.actions[action_police][1]
 		if (row_police == -1) or (row_police == self.maze.shape[0]) or (col_police == -1) or (col_police == self.maze.shape[1]):
-			print("Illegal police move:", self.states[state], self.actions_names[action_police])
-			print("Resulting state:", row_player, col_player, row_police, col_police)
-			print(self.maze.shape)
 			row_police = self.states[state][2]
 			col_police = self.states[state][3]
 		return self.map[(row_player, col_player, row_police, col_police)]
@@ -193,7 +190,9 @@ class Maze:
 					if self.states[s][0] == self.states[next_s][0] and self.states[s][1] == self.states[next_s][1] and a_p != self.STAY:
 						rewards[s, a_p] += self.IMPOSSIBLE_REWARD*prob
 					# Rewrd for being caught
-					elif self.states[next_s][0] == self.states[next_s][2] and self.states[next_s][1] == self.states[next_s][3]:
+					elif self.states[next_s][0] == self.states[next_s][2] and self.states[next_s][1] == self.states[next_s][3] or \
+						 (self.states[next_s][0] == self.states[s][2] and self.states[next_s][1] == self.states[s][3] and \
+						  self.states[s][0] == self.states[next_s][2] and self.states[s][1] == self.states[next_s][3]):
 						rewards[s, a_p] += self.CAUGHT_REWARD*prob
 					# Reward for robbing a bank
 					elif self.maze[self.states[next_s][0:2]] == 1:
@@ -293,7 +292,6 @@ def dynamic_programming(env, horizon):
 	policy = np.zeros((n_states, T+1))
 	Q      = np.zeros((n_states, n_actions))
 
-	print(r.shape)
 	# Initialization
 	Q            = np.copy(r)
 	V[:, T]      = np.max(Q,1)
