@@ -206,6 +206,8 @@ class Maze:
 				next_s = self.__move(s,policy[s,t], np.random.choice(minotaur_moves))
 				# Add the position in the maze corresponding to the next state
 				# to the path
+				if(next_s == self.terminal_state_number):
+					return path
 				path.append(self.states[next_s])
 				# Update time and state for next iteration
 				t +=1
@@ -229,6 +231,8 @@ class Maze:
 				# Move to next state given the policy and the current state
 				minotaur_moves = self.__minotaur_moves(s)
 				next_s = self.__move(s,policy[s], np.random.choice(minotaur_moves))
+				if(next_s == self.terminal_state_number):
+					return path
 				# Add the position in the maze corresponding to the next state
 				# to the path
 				path.append(self.states[next_s])

@@ -1,5 +1,8 @@
 import numpy as np
+import matplotlib.pyplot as plt
 import maze as mz
+'''--------Part A--------'''
+
 
 # Description of the maze as a numpy array
 maze = np.array([
@@ -19,32 +22,53 @@ maze = np.array([
 
 mz.draw_maze(maze)
 
+'''--------Part B--------'''
+
 # Create an environment maze
-env = mz.Maze(maze)
+MinotaurStay = False
+env = mz.Maze(maze, MinotaurStay)
 #env.show()
 
 # Finite horizon
 horizon = 20
-start  = (0, 0, 6, 5)
-
 # Solve the MDP problem with dynamic programming 
 V, policy= mz.dynamic_programming(env,horizon)
-print(V[env.map[start]])
+
+start  = (0,0,6,5)
+value = np.flip(V[env.map[start]])
+plt.figure()
+plt.plot(value)
+plt.ylabel("Value")
+plt.xlabel("T")
+plt.show()
+
 # Simulate the shortest path starting from position A
 method = 'DynProg'
-
 path = env.simulate(start, policy, method)
 print(path)
-'''
-mz.animate_solution(maze, path)
+
+# Show the shortest path 
+#mz.animate_solution(maze, path, start)
+
+'''--------Part C--------'''
+
+# Create an environment maze
+MinotaurStay = False
+env = mz.Maze(maze, MinotaurStay)
+#env.show()
 
 # Discount Factor 
-gamma   = 0.95
+gamma   = 29/30
 # Accuracy treshold 
 epsilon = 0.0001
 V, policy = mz.value_iteration(env, gamma, epsilon)
 
+num_simulations = 10000
 method = 'ValIter'
 start  = (0,0,6,5)
-path = env.simulate(start, policy, method)
-'''
+exit = 0
+for i in range(num_simulations):
+    path = env.simulate(start, policy, method)
+    if[path[-1][0:2] == start[2:]]:
+        exit +=1
+print("Probability of exiting the maze =", exit/num_simulations)

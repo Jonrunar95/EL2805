@@ -1,40 +1,50 @@
 import numpy as np
 import maze as mz
+import matplotlib.pyplot as plt
+
+'''--------Part A--------'''
 
 # Description of the maze as a numpy array
+# with the convention 
+# 0 = empty cell
+# 1 = bank
 maze = np.array([
     [1, 0, 0, 0, 0, 1],
     [0, 0, 0, 0, 0, 0],
     [1, 0, 0, 0, 0, 1],
 ])
-# with the convention 
-# 0 = empty cell
-# 1 = bank
 mz.draw_maze(maze)
+
 
 # Create an environment maze
 env = mz.Maze(maze)
-'''
 # env.show()
-# Finite horizon
-horizon = 10
-# Solve the MDP problem with dynamic programming 
-V, policy= mz.dynamic_programming(env,horizon)
 
-# Simulate the shortest path starting from position A
-method = 'DynProg'
-start  = (0, 0, 2, 3)
-path = env.simulate(start, policy, method)
+'''--------Part B--------'''
 
-mz.animate_solution(maze, path, start)
+start  = (0,0,1,2)
+# Discount Factors
+GAMMA = np.arange(0.1, 1, 0.01)
+# Accuracy treshold 
+epsilon = 0.0001
+value = []
+for gamma in GAMMA:
+    V, policy = mz.value_iteration(env, gamma, epsilon)
+    value.append(V[env.map[start]])
+
+plt.plot(GAMMA, value)
+plt.ylabel("Value")
+plt.xlabel("λ")
+plt.show()
+
 
 # Discount Factor 
-gamma   = 0.95
+gamma   = 0.99 #0.5
 # Accuracy treshold 
 epsilon = 0.0001
 V, policy = mz.value_iteration(env, gamma, epsilon)
-
 method = 'ValIter'
-start  = (0,0,1,2)
+start  = (0, 0, 1, 2)
 path = env.simulate(start, policy, method)
-'''
+# Show the shortest path 
+#mz.animate_solution(maze, path, start)

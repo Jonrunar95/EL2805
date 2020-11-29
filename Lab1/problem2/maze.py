@@ -88,6 +88,11 @@ class Maze:
 		if (row_police == -1) or (row_police == self.maze.shape[0]) or (col_police == -1) or (col_police == self.maze.shape[1]):
 			row_police = self.states[state][2]
 			col_police = self.states[state][3]
+		
+		if row_player == row_police and col_player == col_police or \
+			(row_player == self.states[state][2] and col_player == self.states[state][3] and \
+			self.states[state][0] == row_police and self.states[state][1] == col_police):
+			return self.map[row_police, col_police,row_police, col_police]
 		return self.map[(row_player, col_player, row_police, col_police)]
 
 	def __police_moves(self, state):
@@ -172,10 +177,14 @@ class Maze:
 			police_moves = self.__police_moves(s)
 			for a_p in range(self.n_actions):
 				for a_m, prob in police_moves.items():
+					next_s = self.__move(s, a_p, a_m)
 					if self.states[s][0:2] == self.states[s][2:]:
 						transition_probabilities[self.map[self.start_state], s, a_p] = 1
+					elif self.states[next_s][0:2] == self.states[s][2:]:
+						i = self.states[next_s][0]
+						j = self.states[next_s][1]
+						transition_probabilities[self.map[(i, j, i, j)], s, a_p] = prob
 					else:
-						next_s = self.__move(s, a_p, a_m)
 						transition_probabilities[next_s, s, a_p] = prob
 		return transition_probabilities
 
@@ -187,12 +196,10 @@ class Maze:
 				for a_m, prob in police_moves.items():
 					next_s = self.__move(s, a_p, a_m)
 					# Impossible reward
-					if self.states[s][0] == self.states[next_s][0] and self.states[s][1] == self.states[next_s][1] and a_p != self.STAY:
+					if self.states[s][0:2] == self.states[next_s][0:2] and a_p != self.STAY:
 						rewards[s, a_p] += self.IMPOSSIBLE_REWARD*prob
 					# Rewrd for being caught
-					elif self.states[next_s][0] == self.states[next_s][2] and self.states[next_s][1] == self.states[next_s][3] or \
-						 (self.states[next_s][0] == self.states[s][2] and self.states[next_s][1] == self.states[s][3] and \
-						  self.states[s][0] == self.states[next_s][2] and self.states[s][1] == self.states[next_s][3]):
+					elif (self.states[next_s][0:2] == self.states[next_s][2:]) or (self.states[next_s][0:2] == self.states[s][2:]):
 						rewards[s, a_p] += self.CAUGHT_REWARD*prob
 					# Reward for robbing a bank
 					elif self.maze[self.states[next_s][0:2]] == 1:
