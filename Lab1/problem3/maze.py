@@ -83,6 +83,7 @@ class Maze:
 			for a_p in range(self.n_actions):
 				for a_m, prob in police_moves.items():
 					if self.states[s][0:2] == self.states[s][2:]:
+
 						transition_probabilities[self.map[self.start_state], s, a_p] = 1
 					else:
 						next_s = self.__move(s, a_p, a_m)
