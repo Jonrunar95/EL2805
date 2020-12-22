@@ -19,6 +19,8 @@ import gym
 import torch
 from tqdm import trange
 from problem1 import DQN
+from DQN_agent import RandomAgent
+agent = RandomAgent(4)
 
 def running_average(x, N):
     ''' Function used to compute the running average
@@ -54,30 +56,31 @@ episode_reward_list = []  # Used to store episodes reward
 print('Checking solution...')
 EPISODES = trange(N_EPISODES, desc='Episode: ', leave=True)
 for i in EPISODES:
-    EPISODES.set_description("Episode {}".format(i))
-    # Reset enviroment data
-    done = False
-    state = env.reset()
-    total_episode_reward = 0.
-    while not done:
-        # Get next state and reward.  The done variable
-        # will be True if you reached the goal position,
-        # False otherwise
-        q_values = model(torch.tensor([state]))
-        _, action = torch.max(q_values, axis=1)
-        next_state, reward, done, _ = env.step(action.item())
+	EPISODES.set_description("Episode {}".format(i))
+	# Reset enviroment data
+	done = False
+	state = env.reset()
+	total_episode_reward = 0.
+	while not done:
+		# Get next state and reward.  The done variable
+		# will be True if you reached the goal position,
+		# False otherwise
+		q_values = model(torch.tensor([state]))
+		_, action = torch.max(q_values, axis=1)
+		#action = agent.forward(state)
+		next_state, reward, done, _ = env.step(action.item())#env.step(action)
 
-        # Update episode reward
-        total_episode_reward += reward
+		# Update episode reward
+		total_episode_reward += reward
 
-        # Update state for next iteration
-        state = next_state
+		# Update state for next iteration
+		state = next_state
 
-    # Append episode reward
-    episode_reward_list.append(total_episode_reward)
+	# Append episode reward
+	episode_reward_list.append(total_episode_reward)
 
-    # Close environment
-    env.close()
+	# Close environment
+	env.close()
 
 avg_reward = np.mean(episode_reward_list)
 confidence = np.std(episode_reward_list) * 1.96 / np.sqrt(N_EPISODES)
