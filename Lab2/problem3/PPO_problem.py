@@ -48,6 +48,7 @@ class Critic(nn.Module):
 		x = F.relu(self.layer3(x))
 		return x
 
+
 class Actor(nn.Module):
 	def __init__(self, input_size, output_size):
 		super(Actor, self).__init__()
@@ -67,6 +68,7 @@ class Actor(nn.Module):
 		var_out = torch.sigmoid(self.layer_mu2(var))
 
 		return mu_out, var_out
+
 
 
 def critic_backward(loss):
@@ -135,7 +137,7 @@ m = len(env.action_space.high) # dimensionality of the action
 M = 10                         # No. epochs
 actor_lr = 10**(-5)            # Adam learning rate for actor
 critic_lr = 10**(-3)		   # Adam learning rate for critic
-epsilon = 0.2
+epsilon = 0.2				   # Obj. func. clipping hyperparameter
 
 # Reward
 episode_reward_list = []  # Used to save episodes reward
@@ -173,7 +175,7 @@ for i in EPISODES:
 		# Get state tensor
 		state_tensor = torch.tensor([state], requires_grad=False, dtype=torch.float32)
 
-		# Get mu and var from actor
+		# Get mu and var from actor pi_theta
 		mu, var = actor_nn.forward(state_tensor)
 
 		# Get distribution
@@ -204,15 +206,15 @@ for i in EPISODES:
 	G = []
 	for i in range(buffer.getLength()):
 		y_sum = 0 
-		for n in range(i, t):
-			y_sum += discount_factor**(n-i) * buffer.rewards[n] 
+		for k in range(i, t):
+			y_sum += discount_factor**(k-i) * buffer.rewards[k] 
 		G.append(y_sum)
-	G = torch.tensor(G).float().unsqueeze(dim=-1)
+	G = torch.tensor(G, requires_grad=False, dtype=torch.float32).unsqueeze(dim=-1) # Think about this
 
 	# Create tensor for all states in buffer
 	states = torch.tensor(buffer.states, requires_grad=False, dtype=torch.float32)
 
-	# Get values from critic for all buffer states
+	# Get value estimates from critic V_omega for all buffer states
 	V_omega = critic_nn.forward(states)
 
 	# Advantage estimation psi_i
@@ -230,15 +232,15 @@ for i in EPISODES:
 		# Backwards on critic
 		critic_backward(critic_loss)
 
-		# Get next actions via actor
+		# Re-estimate pi_theta
 		actor_mus, actor_vars = actor_nn.forward(states)
 		actor_vars = torch.diag_embed(actor_vars)
 
 		# Calculate actor loss, DOUBLECHECK THIS!
 		actor_loss = torch.zeros(1)
 		for i in range(buffer.getLength()):
-			actorDist = MultivariateNormal(actor_mus[i], actor_vars[i]) # Get actor distribution for mu & var
-			action_prob = actorDist.log_prob(buffer.actions[i]) # Get prob. of action for distribution
+			actorDist = MultivariateNormal(actor_mus[i], actor_vars[i]) # Get actor distribution for mu_i & var_i
+			action_prob = actorDist.log_prob(buffer.actions[i]) # Get prob. of the action for new actor distribution
 			r_theta = torch.exp(action_prob - buffer.actionProb[i]) # pi_theta / pi_theta_old
 			c_epsilon = torch.max(1 - epsilon, torch.min(r_theta, 1 + epsilon)) # clipping function
 			actor_loss += torch.min(r_theta * psi[i], c_epsilon * psi[i])
