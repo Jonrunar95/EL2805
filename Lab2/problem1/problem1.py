@@ -186,11 +186,11 @@ def train(BUFFER_LENGTH, LEARNING_RATE, HIDDEN_LAYERS, NEURON_PER_LAYER, BATCH_S
 		episode_reward_list.append(total_episode_reward)
 		episode_number_of_steps.append(t)
 
-		'''
+		
 		if (i+1) % N_EPISODES == 0: # Save the neural_network
 			name = 'neural-network-1.pt'
 			torch.save(network, name)
-		'''
+		
 
 		# Close environment
 		env.close()
@@ -508,11 +508,11 @@ def plot3DImage():
 			S[i*num+j, 4] = w[j]
 
 	states_tensor = torch.tensor(S, requires_grad=False, dtype=torch.float32)
-	Q_sa = model.forward(states_tensor).max(1)[0].detach().numpy()
-
+	Q_sA = model.forward(states_tensor)
+	Q_sa = Q_sA.max(1)[0].detach().numpy()
+	print(Q_sA[-10:])
 	fig = plt.figure()
 	ax = fig.add_subplot(111, projection='3d')
-
 	ax.scatter(S[:, 1], S[:, 4], Q_sa, marker='o')
 
 	ax.set_xlabel('Y')
@@ -528,10 +528,9 @@ if __name__ == "__main__":
 	BUFFER_LENGTH = 20000 # 5000 − 30000.
 	LEARNING_RATE = 0.0005 # 10^-3 - 10^-4
 	HIDDEN_LAYERS = 2 # Unused, always 2 hidden layers
-	NEURON_PER_LAYER = 64 # 8 - 128
+	NEURON_PER_LAYER = 32 # 8 - 128
 	BATCH_SIZE = 32 # 4 − 128
 	DISCOUNT_FACTOR = 0.99 # Value of the discount factor
 
-	#trainManyBufferSizes(BUFFER_LENGTH, LEARNING_RATE, HIDDEN_LAYERS, NEURON_PER_LAYER, BATCH_SIZE, DISCOUNT_FACTOR)
-
+	#train(BUFFER_LENGTH, LEARNING_RATE, HIDDEN_LAYERS, NEURON_PER_LAYER, BATCH_SIZE, DISCOUNT_FACTOR)
 	plot3DImage()
